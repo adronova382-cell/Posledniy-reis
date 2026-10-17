@@ -111,6 +111,15 @@ srv.on('upgrade', (req, socket) => {
     if (!me) return;
     me.last = Date.now();
     if (m.t === 'st') me.st = cleanState(m);
+    else if (m.t === 'ev') {                                   // удар / укус / лечение другого игрока
+      const to = players.get(String(m.to || '')), k = String(m.k || '');
+      if (!to || to === me || !me.st || !to.st || to.world !== me.world) return;
+      if (!['hit', 'bite', 'cure'].includes(k)) return;
+      const d = Math.hypot(to.st.x - me.st.x, to.st.z - me.st.z);
+      if (d > (k === 'hit' ? 65 : 4)) return;
+      const now = Date.now(); if (now - (me.evT || 0) < 120) return; me.evT = now;
+      send(to.c, { t: 'ev', from: me.id, n: me.nick, k, dmg: num(m.dmg, 0, 80) | 0, dx: num(m.dx, -1, 1), dz: num(m.dz, -1, 1) });
+    }
     else if (m.t === 'ping') send(c, { t: 'pong', c: m.c });
   };
   c.onClose = () => {
